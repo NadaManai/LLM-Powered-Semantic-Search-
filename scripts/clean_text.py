@@ -10,6 +10,7 @@ def clean_paragraph(text: str) -> str:
     """Cleans a paragraph from unwanted characters and hyphenation."""
     text = re.sub(r'-\n', '', text)        # fix hyphenation
     text = re.sub(r'\s+', ' ', text)       # normalize whitespace
+    text = re.sub(r'\s([.,;:%])', r'\1', text)  # fix space before punctuation
     return text.strip()
 
 def load_and_clean_pdfs(pdf_dir: str):
