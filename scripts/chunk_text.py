@@ -8,10 +8,10 @@ PDF_DIR = "data/raw/pdfs"
 OUTPUT_DIR = "data/chunks"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Default chunk settings
+# default chunk settings
 DEFAULT_CHUNK_SIZE = 150    # words per chunk
 DEFAULT_CHUNK_OVERLAP = 50  # words overlapping between chunks
-AUTO_CHUNK = True           # if True, adjust chunk size based on document length
+AUTO_CHUNK = True           
 
 def split_into_chunks(text, chunk_size=DEFAULT_CHUNK_SIZE, overlap=DEFAULT_CHUNK_OVERLAP):
     words = text.split()
@@ -43,11 +43,10 @@ if __name__ == "__main__":
 
     all_chunks = []
 
-    # Chunk the merged text per document
+    # chunk the merged text per document
     for (source, lang), texts in grouped_docs.items():
         full_text = " ".join(texts)
 
-        # Decide chunk size
         if AUTO_CHUNK:
             chunk_size, overlap = get_dynamic_chunk_size(full_text)
         else:
@@ -63,7 +62,7 @@ if __name__ == "__main__":
                 "text": chunk
             })
 
-    # Save chunks
+    # save chunks
     output_file = os.path.join(OUTPUT_DIR, "bourse_chunks.json")
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(all_chunks, f, ensure_ascii=False, indent=2)
