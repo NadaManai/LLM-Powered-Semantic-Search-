@@ -1,41 +1,37 @@
-import os
 import json
-from clean_text import load_and_clean_pdfs  
+import numpy as np
+import faiss
+from sentence_transformers import SentenceTransformer
 
-CHUNK_SIZE = 150   
-CHUNK_OVERLAP = 50 
-PDF_DIR = "data/raw/pdfs"
-OUTPUT_DIR = "data/chunks"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+INDEX_PATH = "data/faiss_index/bourse_index.faiss"
+META_PATH = "data/faiss_index/metadata.json"
 
-def split_into_chunks(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
-    words = text.split()
-    chunks = []
-    start = 0
-    while start < len(words):
-        end = min(start + chunk_size, len(words))
-        chunks.append(" ".join(words[start:end]))
-        start += chunk_size - overlap
-    return chunks
+# load index and metadata
+index = faiss.read_index(INDEX_PATH)
 
-if __name__ == "__main__":
-    docs = load_and_clean_pdfs(PDF_DIR)
-    all_chunks = []
+with open(META_PATH, "r", encoding="utf-8") as f:
+    metadata = json.load(f)
 
-    for idx, doc in enumerate(docs):
-        # if doc["lang"] != "fr": continue  
-        chunks = split_into_chunks(doc["text"])
-        for i, chunk in enumerate(chunks):
-            all_chunks.append({
-                "source": doc["source"],
-                "paragraph_index": idx,
-                "chunk_index": i,
-                "lang": doc["lang"],  
-                "text": chunk
-            })
+print("Index size:", index.ntotal)
 
-    output_file = os.path.join(OUTPUT_DIR, "bourse_chunks.json")
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(all_chunks, f, ensure_ascii=False, indent=2)
+model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
-    print(f"Created {len(all_chunks)} chunks and saved to {output_file}")
+def search(query, k=5):
+    q_emb = model.encode([query], convert_to_numpy=True)
+    q_emb = q_emb / np.linalg.norm(q_emb, axis=1, keepdims=True)
+
+    scores, indices = index.search(q_emb, k)
+
+    results = []
+    for score, idx in zip(scores[0], indices[0]):
+        results.append({
+            "score": float(score),
+            "text": metadata[idx]["text"]
+        })
+    return results
+
+# test
+results = search("marché boursier tunisien", k=5)
+for r in results:
+    print("\nScore:", r["score"])
+    print(r["text"][:300])
